@@ -2,7 +2,7 @@
 
 Interactive web application for exploring gene co-expression networks through clustered correlation matrices. Leverages hierarchical clustering and InteractiveComplexHeatmap for responsive visualization of large biological datasets.
 
-![Demo Preview](hero.png) <!-- Replace with actual image path -->
+![Demo Preview](www/hero.png)
 
 ## Features
 - Interactive exploration of correlation matrices with hover value inspection
@@ -86,7 +86,7 @@ shiny::runApp("app.R")
   - 2k×2k matrix: <1 min
 
 ## Support
-For technical issues or feature requests, please [open an issue](https://github.com/yourusername/gene-coexpression-shiny/issues).  
+For technical issues or feature requests, please [open an issue](https://github.com/krishna-creator/gene_co-expression_tool/issues).  
 <!--When using this tool in publications, please cite:
 [comment]: <>(> **InteractiveComplexHeatmap**: Gu, Z. (2022) Bioinformatics.) -->
 
