@@ -24,7 +24,7 @@ Interactive web application for exploring gene co-expression networks through cl
 
 ## Installation
 ```bash
-git clone https://github.com/yourusername/gene-coexpression-shiny.git
+git clone https://github.com/krishna-creator/gene_co-expression_tool.git
 cd gene-coexpression-shiny
 ```
 
