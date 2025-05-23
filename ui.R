@@ -53,6 +53,7 @@ sidebar <- dashboardSidebar(
       selected = "GeneName",
       inline = TRUE
     ),
+    numericInput("num_clusters", "Number of Clusters (cut tree):", value = 3, min = 2, max = 20),
     radioButtons("matrix_type", "Matrix Type:",
                  choices = c("Full Matrix", "Reduced Matrix", "Top N Genes"),
                  selected = "Full Matrix"),
@@ -180,25 +181,27 @@ body <- dashboardBody(
               "About",
               h3("Features:"),
               tags$ul(
-                tags$li("Interactive heatmap exploration with zooming and value inspection"),
-                tags$li("Multiple dataset support with different correlation metrics"),
-                tags$li("Adjustable matrix sizes for optimal performance"),
-                tags$li("Cluster analysis visualization")
+                tags$li("Interactive heatmap exploration with zoom, brush, and tooltip support"),
+                tags$li("Gene search with GeneID or GeneName toggle"),
+                tags$li("Sub-heatmap for selected gene regions"),
+                tags$li("DotPlot visualization for gene expression"),
+                tags$li("Advanced filtering: top genes and correlation range selection"),
+                tags$li("Export of selected gene table and heatmap images")
               ),
-              tags$img(src = "hero.png", height = "500px", width = "auto")
+              tags$img(src = "welcome_page.png", height = "500px", width = "auto")
             ),
             tabPanel(
               "Datasets",
-              h3("Available Datasets:"),
+              h3("Available Datasets (NE genes only):"),
               div(class = "dataset-info",
-                  h4("General Co-expression & Arabidopsis Thaliana Leaf Datasets:"),
                   tags$ul(
-                    tags$li(strong("Taylor’s Analysis:"), "Co-expression analysis results for Taylor’s dataset"),
-                    tags$li(strong("Kelsey’s Analysis:"), "Co-expression analysis results for Kelsey’s dataset"),
-                    tags$li(strong("ATH Leaf 2k Pearson:"), "2000 genes with Pearson correlations"),
-                    tags$li(strong("ATH Leaf 2k Spearman:"), "2000 genes with Spearman correlations"),
-                    tags$li(strong("Coexpression_all:"), "Full genome co-expression matrix"),
-                    tags$li(strong("Coexpression_bulk:"), "Bulk tissue-specific co-expression")
+                    tags$li(strong("Cauline:"), "NE gene-specific co-expression data from cauline tissue"),
+                    tags$li(strong("Flower:"), "NE gene-specific co-expression data from flower tissue"),
+                    tags$li(strong("Leaf:"), "NE gene-specific co-expression data from leaf tissue"),
+                    tags$li(strong("Root:"), "NE gene-specific co-expression data from root tissue"),
+                    tags$li(strong("Shoot:"), "NE gene-specific co-expression data from shoot tissue"),
+                    tags$li(strong("Silique:"), "NE gene-specific co-expression data from silique tissue"),
+                    tags$li(strong("Stem:"), "NE gene-specific co-expression data from stem tissue")
                   )
               )
             ),
@@ -207,10 +210,10 @@ body <- dashboardBody(
               h3("Getting Started:"),
               tags$ol(
                 tags$li("Navigate to the 'Heatmap' tab"),
-                tags$li("Select a dataset from the dropdown"),
-                tags$li("Choose matrix size (reduced for faster processing)"),
-                tags$li("Click 'Generate Heatmap' to visualize"),
-                tags$li("Use interactive features: search, zoom, click")
+                tags$li("Select a dataset focused on NE genes"),
+                tags$li("Choose matrix size or top N genes if needed"),
+                tags$li("Click 'Generate Heatmap' to visualize correlations"),
+                tags$li("Use features: zoom, search, subheatmap, DotPlot")
               )
             )
           )
@@ -227,7 +230,15 @@ body <- dashboardBody(
           width = NULL,  
           solidHeader = TRUE,
           status = "primary",
-          originalHeatmapOutput("heatmap_output", width = "100%", action = "hover", response = c("hover", "brush"), height = 700, containment = TRUE)
+          originalHeatmapOutput(
+            "heatmap_output",
+            #output_ui = FALSE,  # 🛑 prevents auto-initialization
+            width = "100%",
+            action = "hover",
+            response = c("hover", "brush"),
+            height = 700,
+            containment = TRUE
+          )
         ),
         div(id = "heatmap_tooltip")
       ),
@@ -240,6 +251,14 @@ body <- dashboardBody(
                )
         ),
         column(width = 6,
+               box(title = "Sub-heatmap Mode", width = NULL, solidHeader = TRUE, status = "primary",
+                   radioButtons("subheatmap_mode", "Choose Sub-heatmap Mode:",
+                                choices = c("Zoom", "Cluster"), selected = "Zoom", inline = TRUE),
+                   conditionalPanel(
+                     condition = "input.subheatmap_mode == 'Cluster'",
+                     selectInput("selected_cluster", "Select Cluster", choices = NULL)
+                   )
+               ),
                box(title = "Heatmap Info", width = NULL, solidHeader = TRUE, status = "primary",
                    HeatmapInfoOutput("heatmap_output", title = NULL)
                ),
