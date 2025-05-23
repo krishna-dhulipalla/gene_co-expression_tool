@@ -2,7 +2,7 @@
 
 Interactive web application for exploring gene co-expression networks through clustered correlation matrices. Leverages hierarchical clustering and InteractiveComplexHeatmap for responsive visualization of large biological datasets.
 
-![Demo Preview](www/hero.png)
+![Demo Preview](www/welcome_page.png)
 
 ## Features
 - Interactive exploration of correlation matrices with hover value inspection
