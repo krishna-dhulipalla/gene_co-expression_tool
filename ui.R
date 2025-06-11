@@ -53,7 +53,7 @@ sidebar <- dashboardSidebar(
       selected = "GeneName",
       inline = TRUE
     ),
-    numericInput("num_clusters", "Number of Clusters (cut tree):", value = 3, min = 2, max = 20),
+    numericInput("num_clusters", "Number of Clusters (cut tree):", value = 8, min = 5, max = 20),
     radioButtons("matrix_type", "Matrix Type:",
                  choices = c("Full Matrix", "Reduced Matrix", "Top N Genes"),
                  selected = "Full Matrix"),
@@ -142,6 +142,9 @@ body <- dashboardBody(
   #heatmap_output_heatmap_resize {
     width: auto !important;
     height: auto !important;
+    max-width: 1400px !important;
+    margin: 0 auto;
+}
   }
   #heatmap_output_sub_heatmap_resize {
     width: auto !important;
@@ -247,7 +250,7 @@ body <- dashboardBody(
       fluidRow(
         column(width = 6,
                box(title = "Sub-heatmap", width = NULL, solidHeader = TRUE, status = "primary",
-                   plotlyOutput("sub_heatmaply", height = "500px")
+                   plotlyOutput("sub_heatmaply", height = "500px")%>% withSpinner(type = 4)
                )
         ),
         column(width = 6,

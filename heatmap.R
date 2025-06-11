@@ -4,7 +4,7 @@ my_colors <- c(
   "#377EB8",  # Blue
   "#4DAF4A",  # Green
   "#984EA3",  # Purple
-  "#FF7F00"   # Orange
+  "gray"   # Orange
 )
 
 create_heatmap <- function(mat, row_categories = NULL, highlight_category = NULL, num_clusters = NULL, hc_rows = NULL) {
@@ -20,10 +20,22 @@ create_heatmap <- function(mat, row_categories = NULL, highlight_category = NULL
   # 1. Category annotation
   if (!is.null(row_categories)) {
     if (!is.null(highlight_category) && highlight_category != "") {
-      cat_highlighted <- ifelse(row_categories == highlight_category, highlight_category, "Other")
-      cat_factor <- factor(cat_highlighted, levels = c(highlight_category, "Other"))
-      annotations_list$Category <- cat_factor
-      color_list$Category <- setNames(c("red", "gray"), c(highlight_category, "Other"))
+      if (highlight_category == "Other") {
+        cat_highlighted <- ifelse(row_categories == "Other", "Other", "Non-Other")
+        cat_factor <- factor(cat_highlighted, levels = c("Other", "Non-Other"))
+        annotations_list$Category <- cat_factor
+        color_list$Category <- setNames(c("gray", "black"), c("Other", "Non-Other"))
+      } else {
+        if (highlight_category == "NPC") {
+          cat_highlighted <- ifelse(row_categories == "Yes", "NPC", "Other")
+        } else {
+          cat_highlighted <- ifelse(row_categories == highlight_category, highlight_category, "Other")
+        }
+        cat_factor <- factor(cat_highlighted, levels = c(highlight_category, "Other"))
+        annotations_list$Category <- cat_factor
+        highlight_color <- "red"
+        color_list$Category <- setNames(c(highlight_color, "gray"), c(highlight_category, "Other"))
+      }
     } else {
       cat_counts <- sort(table(row_categories[row_categories != "Other"]), decreasing = TRUE)
       top5_levels <- names(cat_counts)[1:min(5, length(cat_counts))]

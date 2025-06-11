@@ -11,27 +11,52 @@ source("modules/rendering_functions.R")
 # Initialize reactive values
 data_cache <- reactiveVal(list(name = NULL, df = NULL))
 cluster_map <- reactiveVal(NULL) 
+selected_file <- reactiveVal(NULL)
+last_submitted_file <- reactiveVal(NULL)
 
 server <- function(input, output, session) {
   data <- reactiveVal()
   heatmap_obj <- reactiveVal()
   display_labels <- reactiveVal()
+  output$sub_heatmaply <- renderPlotly(NULL)
   
   # Reset inputs when new file is selected
   observeEvent(input$file, {
-    updateSelectInput(session, "highlight_category", choices = NULL, selected = "Top5")
-    updateRadioButtons(session, "matrix_type", selected = "Full Matrix")
-    updateRadioButtons(session, "filter_mode", selected = "None")
-    updateNumericInput(session, "matrix_size", value = 50)
-    updateNumericInput(session, "top_n_genes", value = 100)
-    updateSliderInput(session, "inside_range", value = c(-0.5, 0.5))
-    updateSliderInput(session, "outside_range", value = c(-0.5, 0.5))
+    df_preview <- tryCatch({ readRDS(url(file_paths[[input$file]])) }, error = function(e) NULL)
+    
+    if (!is.null(df_preview) && "category" %in% colnames(df_preview)) {
+      row_categories_full <- normalize_categories(setNames(df_preview$category, df_preview$GeneID))
+      cat_counts <- sort(table(row_categories_full), decreasing = TRUE)
+      sorted_cats_by_freq <- names(cat_counts)
+      category_display_names <- paste0(sorted_cats_by_freq, " (", cat_counts, ")")
+      named_categories <- setNames(sorted_cats_by_freq, category_display_names)
+      
+      category_choices <- c("Top 5 Categories" = "Top5", "NPC", named_categories)
+      
+      updateSelectInput(session, "highlight_category", choices = category_choices, selected = "Top5")
+    } else {
+      # Clear dropdown explicitly if no categories
+      updateSelectInput(session, "highlight_category", choices = list("No Categories Available" = ""), selected = "")
+    }
   })
   
   # Process data when submit button is clicked
   observeEvent(input$submit, {
-    req(input$file)
-    showNotification("Loading data...", duration = NULL, id = "load_msg")
+    selected_file(input$file)
+    req(selected_file())
+    # Reset UI inputs only if file has changed
+    if (!is.null(last_submitted_file()) && input$file != last_submitted_file()) {
+      updateRadioButtons(session, "matrix_type", selected = "Full Matrix")
+      updateRadioButtons(session, "filter_mode", selected = "None")
+      updateNumericInput(session, "matrix_size", value = 50)
+      updateNumericInput(session, "top_n_genes", value = 100)
+      updateSliderInput(session, "inside_range", value = c(-0.5, 0.5))
+      updateSliderInput(session, "outside_range", value = c(-0.5, 0.5))
+    }
+    
+    # Update the last submitted file
+    last_submitted_file(input$file)
+    showNotification("Loading data.", duration = NULL, id = "load_msg")
     
     df <- if (!is.null(data_cache()$name) && identical(data_cache()$name, input$file)) {
       data_cache()$df
@@ -61,16 +86,17 @@ server <- function(input, output, session) {
     
     cluster_map(result$clusters)
     display_labels(result$display_labels)
+    
     heatmap_obj(result$heatmap)
     
     removeNotification("load_msg")
   })
   
   # Handle heatmap interactions
-  observeEvent(heatmap_obj(), {
+  observeEvent(input$submit, {
     req(heatmap_obj())
-    ht <- draw(heatmap_obj(), test = FALSE)
     
+    ht <- draw(heatmap_obj(), test = FALSE)
     makeInteractiveComplexHeatmap(
       input, output, session, ht,
       heatmap_id = "heatmap_output",
@@ -114,7 +140,7 @@ server <- function(input, output, session) {
       },
       
       brush_action = function(df, input, output, session) {
-        if (input$subheatmap_mode != "Zoom") return()
+        if (isolate(input$subheatmap_mode) != "Zoom") return()
         
         d <- data()
         mat <- d$mat
@@ -125,11 +151,20 @@ server <- function(input, output, session) {
         selected_ids <- rownames(mat)[unique(unlist(df$row_index))]
         selected_cols <- colnames(mat)[unique(unlist(df$column_index))]
         
-        # Update all outputs only if in Zoom mode
+        if (length(selected_ids) > 350) {
+          showNotification("Too many genes selected (>350). Sub-heatmap, table, and dotplot will not be displayed.", type = "warning", duration = 5000, id = "sub1")
+          output$sub_heatmaply <- renderPlotly(NULL)
+          output$selected_table <- DT::renderDT(NULL)
+          output$dotplot <- renderPlot({ ggplot() + theme_void() })
+          return()
+        }
+        removeNotification("sub1")
+        removeNotification("sub2")
         output$sub_heatmaply <- renderPlotly({
           render_sub_heatmap(
             mat = mat,
-            gene_ids = selected_ids,
+            row_ids = selected_ids,
+            col_ids = selected_cols,
             row_categories = row_categories,
             top_categories = top_categories,
             labels = labels,
@@ -138,15 +173,16 @@ server <- function(input, output, session) {
         })
         
         render_selected_table(output, mat, labels, selected_ids, selected_cols)
-        render_dotplot(output, input$file, selected_ids, labels)
+        render_dotplot(output, selected_file(), selected_ids, labels)
       }
-        )
-      })
-  
+    )
+  })
   
   # Handle cluster selection
   observeEvent(input$selected_cluster, {
     req(input$subheatmap_mode == "Cluster", cluster_map(), data())
+    
+    if (is.null(input$selected_cluster) || input$selected_cluster == "") return()
     
     clusters <- cluster_map()
     selected_cluster <- as.numeric(input$selected_cluster)
@@ -155,6 +191,15 @@ server <- function(input, output, session) {
     
     gene_ids <- names(clusters[clusters == selected_cluster])
     
+    if (length(gene_ids) > 350) {
+      showNotification("Selected cluster has too many genes (>350). Sub-heatmap, table, and dotplot will not be displayed.", type = "warning", duration = 5000, id= "sub2")
+      output$sub_heatmaply <- renderPlotly(NULL)
+      output$selected_table <- DT::renderDT(NULL)
+      output$dotplot <- renderPlot({ ggplot() + theme_void() })  # Empty plot
+      return()
+    }
+    removeNotification("sub2")
+    removeNotification("sub1")
     d <- data()
     mat <- d$mat
     labels <- display_labels()
@@ -162,7 +207,8 @@ server <- function(input, output, session) {
     output$sub_heatmaply <- renderPlotly({
       render_sub_heatmap(
         mat = mat,
-        gene_ids = gene_ids,
+        row_ids = gene_ids,
+        col_ids = gene_ids,
         row_categories = d$row_categories,
         top_categories = d$top_categories,
         labels = labels,
