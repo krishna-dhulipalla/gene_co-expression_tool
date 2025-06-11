@@ -1,0 +1,18 @@
+# R version: R version 4.3.2 (2023-10-31 ucrt) 
+
+Package	Version
+shiny	1.10.0
+shinydashboard	0.7.3
+data.table	1.17.0
+ComplexHeatmap	2.18.0
+InteractiveComplexHeatmap	1.10.0
+circlize	0.4.16
+shinycssloaders	1.1.0
+Cairo	1.6.2
+DT	0.33
+ggplot2	3.5.2
+shinyjs	2.1.0
+heatmaply	1.5.0
+plotly	4.10.4
+ggnewscale	0.5.1
+Seurat	5.2.1
